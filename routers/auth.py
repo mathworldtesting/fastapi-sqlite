@@ -21,7 +21,7 @@ SECRET_KEY = '1dfda60e85211ce3a30ce7d0dbc9ad634d2a9333afa4b73d3c98452e2b9898a5'
 ALGORITHM = 'HS256'
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/token")
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/todo/login")
 
 
 class CreateUserRequest(BaseModel):
@@ -73,7 +73,7 @@ def create_access_token(username: str, user_id: int, expires_delta: timedelta):
 
 
 def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
-    try:        
+    try:   
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub")
         user_id = payload.get("id")
@@ -123,7 +123,6 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db :
     :param db: The database session
     :return: A JSON Web Token if the credentials are valid
     """
-    pdb.set_trace()
     user = authenticate_user(form_data.username, form_data.password, db)    
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, 
@@ -147,7 +146,6 @@ def authenticate_user(username: str, password: str, db) -> bool:
     :param db: The database session
     :return: True if the user is authenticated, False otherwise
     """        
-    pdb.set_trace()
     user = db.query(Users).filter(Users.username == username).first()
     if not user:
         return False

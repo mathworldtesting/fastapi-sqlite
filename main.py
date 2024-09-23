@@ -3,7 +3,6 @@ import models.todos_model
 from database.sqlite import engine
 from routers.auth import router as auth
 from routers.todo import router as todo
-import pdb
 
 app = FastAPI()
 
