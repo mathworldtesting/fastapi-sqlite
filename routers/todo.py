@@ -47,11 +47,11 @@ async def read_all(user: user_dependency, db: db_dependency):
     This endpoint returns a list of all TODOs in the database. The TODOs are
     returned in the order they were inserted.
     """
-    return db.query(models.todos_model.Todos).fillter(models.todos_model.Todos.owner_id == user.get("id")).all()
+    return db.query(models.todos_model.Todos).filter(models.todos_model.Todos.owner_id == user.get("id")).all()
 
 
 @router.get("/fetch-all")
-async def read_all(db: db_dependency, status_code=status.HTTP_200_OK):
+async def fetch_all(db: db_dependency):
     """
     Returns all TODOs in the database.
 
