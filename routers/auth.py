@@ -53,7 +53,7 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 
 
-def create_access_token(username: str, user_id: int, expires_delta: timedelta):
+def create_access_token(username: str, user_id: int, role: str, expires_delta: timedelta):
     """
     Creates a JSON Web Token for the given username and user ID.
 
@@ -66,7 +66,7 @@ def create_access_token(username: str, user_id: int, expires_delta: timedelta):
     :param expires_delta: The timedelta during which the token is valid
     :return: A JSON Web Token
     """
-    encode = {"sub": username, "id": user_id}
+    encode = {"sub": username, "id": user_id, 'role': role}
     expires = datetime.now(timezone.utc) + expires_delta
     encode.update({"exp": expires})
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -77,10 +77,11 @@ def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub")
         user_id = payload.get("id")
+        user_role = payload.get("role")
         if username is None or user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, 
                                 detail="Cound not validate user credentials")
-        return {"username": username, "id": user_id}
+        return {"username": username, "id": user_id, "role": user_role}
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, 
                                 detail="Cound not validate user credentials")
@@ -110,7 +111,8 @@ async def register_users(db: db_dependency,
     return {"message": "User created"}
 
 @router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)
-async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db : db_dependency):           
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], 
+                db : db_dependency):           
     """
     Returns a JSON Web Token for the given username and password.
 
@@ -127,7 +129,7 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db :
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, 
                                 detail="Cound not validate user credentials")
-    token = create_access_token(form_data.username, user.id, timedelta(minutes=20)) # type: ignore
+    token = create_access_token(form_data.username, user.id, user.role, timedelta(minutes=20)) # type: ignore
     
     return { "access_token": token, 
             "token_type": "bearer", 

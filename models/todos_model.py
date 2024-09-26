@@ -13,7 +13,7 @@ class Todos(Base):
     description = Column(String)
     priority = Column(Integer)
     completed = Column(Boolean, default=False)
-    owner_id = Column(Integer, ForeignKey("Users.id"))
+    owner_id = Column(Integer, ForeignKey("users.id"))
     
     
 class Users(Base):

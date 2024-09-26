@@ -47,37 +47,55 @@ async def read_all(user: user_dependency, db: db_dependency):
     This endpoint returns a list of all TODOs in the database. The TODOs are
     returned in the order they were inserted.
     """
-    return db.query(models.todos_model.Todos).filter(models.todos_model.Todos.owner_id == user.get("id")).all()
+    if user is None:
+        raise HTTPException(status_code=401, 
+                        detail="Authentication Failed")
+    return db.query(models.todos_model.Todos) \
+                .filter(models.todos_model.Todos.owner_id == user.get("id")).all()
 
 
 @router.get("/fetch-all")
-async def fetch_all(db: db_dependency):
+async def fetch_all(user: user_dependency, 
+                    db: db_dependency):
     """
     Returns all TODOs in the database.
 
     This endpoint returns a list of all TODOs in the database. The TODOs are
     returned in the order they were inserted.
     """
+    if user is None:
+        raise HTTPException(status_code=401, 
+                            detail="Authentication Failed")
     return db.query(models.todos_model.Todos).all() 
 
 
 @router.get("/fetch/{id}")
-async def read_todo(db: db_dependency, id: int = Path(gt=0)):
+async def read_todo(user: user_dependency, 
+                    db: db_dependency, 
+                    id: int = Path(gt=0)):
     """
     Returns a single TODO from the database.
 
     This endpoint returns a single TODO from the database based on the
     `todo_id` parameter. If the TODO is not found, a 404 error is returned. 
     """
-    todo_model: models.todos_model.Todos = db.query(models.todos_model.Todos).filter(models.todos_model.Todos.id == id).first()
+    if user is None:
+        raise HTTPException(status_code=401, 
+                            detail="Authentication Failed")
+        
+    todo_model: models.todos_model.Todos = db.query(models.todos_model.Todos) \
+                .filter(models.todos_model.Todos.id == id) \
+                .filter(models.todos_model.Todos.owner_id == user.get("id")) \
+                .first()
+                
     if not todo_model:
         raise HTTPException(status_code=404, detail="TODO not found")
     return todo_model
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
-async def create_todo(  user: user_dependency,
-                        db: db_dependency, 
-                        todo_request: TodoRequest,                       
+async def create_todo(user: user_dependency,
+                      db: db_dependency, 
+                      todo_request: TodoRequest,                       
                       ):
     """
     Creates a new TODO in the database.
@@ -85,22 +103,21 @@ async def create_todo(  user: user_dependency,
     This endpoint creates a new TODO in the database based on the data
     provided in the `todo_request` parameter. The `todo_request` parameter
     must be an instance of the `TodoRequest` model.
-    """
-    pdb.set_trace()
+    """    
     # user = authenticate_user(form_data.username, form_data.password, db)
     if user is None:
         raise HTTPException(status_code=401, 
-                            detail="Authentication Failed")
+                            detail="Authentication Failed")    
     todo_model: models.todos_model.Todos = models.todos_model.Todos(**todo_request.model_dump(), owner_id=user.get("id"))
-    
+
     db.add(todo_model)
     db.commit()
-    db.refresh(todo_model)
     return todo_model
 
 
 @router.put("/update/{id}", status_code=status.HTTP_200_OK)
-async def update_todo( todo_request: TodoRequest, 
+async def update_todo(user: user_dependency, 
+                      todo_request: TodoRequest, 
                       db: db_dependency,
                       id: int = Path(gt=0), ):
     """
@@ -111,7 +128,11 @@ async def update_todo( todo_request: TodoRequest,
     The `todo_request` parameter must be an instance of the `TodoRequest`
     model.
     """
-    todo_model: models.todos_model.Todos = db.query(models.todos_model.Todos).filter(models.todos_model.Todos.id == id).first()
+    if user is None:
+        raise HTTPException(status_code=401, 
+                            detail="Authentication Failed") 
+    todo_model: models.todos_model.Todos = db.query(models.todos_model.Todos) \
+                                                .filter(models.todos_model.Todos.id == id).first()
     if not todo_model:
         raise HTTPException(status_code=404, 
                             detail="TODO not found")     
@@ -125,15 +146,20 @@ async def update_todo( todo_request: TodoRequest,
 
 
 @router.delete("/delete/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_todo(db: db_dependency, 
-                      id: int = Path(gt=0), ):
+async def delete_todo(  user: user_dependency, 
+                        db: db_dependency, 
+                        id: int = Path(gt=0), ):
     """
     Deletes a single TODO from the database.
 
     This endpoint deletes a single TODO from the database based on the
     `todo_id` parameter. If the TODO is not found, a 404 error is returned.
     """
-    todo_model: models.todos_model.Todos = db.query(models.todos_model.Todos).filter(models.todos_model.Todos.id == id).first()
+    if user is None:
+        raise HTTPException(status_code=401, 
+                            detail="Authentication Failed") 
+    todo_model: models.todos_model.Todos = db.query(models.todos_model.Todos) \
+                                                .filter(models.todos_model.Todos.id == id).first()
     if not todo_model:
         raise HTTPException(status_code=404, detail="TODO not found")
     db.delete(todo_model)
