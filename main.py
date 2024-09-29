@@ -14,5 +14,3 @@ app.include_router(auth)
 app.include_router(todo, prefix="/todo", tags=["todo"])
 app.include_router(admin, prefix="/todo", tags=["admin"])
 app.include_router(users, prefix="/todo", tags=["users"])
-
-

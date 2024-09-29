@@ -9,16 +9,16 @@ from models import todos_model
 from database.sqlite import SessionLocal
 from .auth import get_current_user
 from passlib.context import CryptContext
+from models.todos_model import Users
+from models.users_model import UsersVerification
 
 
 from fastapi import APIRouter
 
 router = APIRouter(
-     prefix="/user",
-    tags=["user"],
+     prefix="/users",
+    tags=["users"],
 )
-
-bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_db():
     """
@@ -36,6 +36,7 @@ def get_db():
         
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
+bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 @router.get("/fetch-all")
 async def get_user(user: user_dependency, 
@@ -49,5 +50,24 @@ async def get_user(user: user_dependency,
     if user is None:
         raise HTTPException(status_code=401, 
                             detail="Authentication Failed")
-    return db.query(models.todos_model.Users).filter(models.todos_model.Users.id == user.get("id")).first()
+    return db.query(Users).filter(Users.id == user.get("id")).first()
 
+
+@router.put("/password", status_code=status.HTTP_200_OK)
+async def update_password(user: user_dependency,
+                          db: db_dependency,
+                          user_verification: UsersVerification):
+    if user is None:
+        raise HTTPException(status_code=401, detail="Authentication Failed")
+    user_model = db.query(Users).filter(Users.id == user.get("id")).first()
+    if not user_model:
+        raise HTTPException(status_code=404, detail="User not found")
+    user_model = db.query(Users).filter(Users.id == user.get("id")).first()
+    pdb.set_trace()
+    if not bcrypt_context.verify(user_verification.password, user_model.hashed_password): # type: ignore
+        raise HTTPException(status_code=401, detail="Error on password change. Please try again")
+
+    user_model.hashed_password = bcrypt_context.hash(user_verification.new_password)
+    db.add(user_model)
+    db.commit()
+    return user_model
